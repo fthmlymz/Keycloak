@@ -6,8 +6,7 @@ ARG KEYCLOAK_VERSION
 FROM quay.io/keycloak/keycloak:$KEYCLOAK_VERSION as builder
 
 # Configure postgres database vendor
-#ENV KC_DB=postgres
-ENV KC_DB=mssql
+ENV KC_DB=postgres
 
 ENV KC_FEATURES="token-exchange,scripts,preview"
 
