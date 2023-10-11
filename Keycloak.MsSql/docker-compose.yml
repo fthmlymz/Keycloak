@@ -4,9 +4,11 @@ services:
     container_name: keycloak.sqlscript
     image: mcr.microsoft.com/mssql-tools
     command: /bin/bash -c 'until /opt/mssql-tools/bin/sqlcmd -S host.docker.internal -U sa -P Aa123456789*-+ -Q "create database KeycloakDb"; do sleep 5; done'
-    
+    network_mode: bridge
+
   keycloak:
     container_name: keycloak
+    restart: always
     build:
       context: .
       args:
@@ -14,29 +16,39 @@ services:
     command: ['start', '--optimized']
     environment:
       JAVA_OPTS_APPEND: -Dkeycloak.profile.feature.upload_scripts=enabled
-      KC_DB_URL: jdbc:sqlserver://host.docker.internal;databaseName=keycloak;encrypt=false
+      KC_DB_URL: jdbc:sqlserver://host.docker.internal;databaseName=KeycloakDb;encrypt=false
       KC_DB_USERNAME: sa                       # database server user
       KC_DB_PASSWORD: Aa123456789*-+           # database server password
       KC_DB: mssql
       KC_HEALTH_ENABLED: 'true'
       KC_HTTP_ENABLED: 'true'
       KC_METRICS_ENABLED: 'true'
-      KC_PROXY: edge
-      KEYCLOAK_ADMIN: admin                    # keycloak admin
-      KEYCLOAK_ADMIN_PASSWORD: Aa123456789*-+  # keycloak password
-      KC_HOSTNAME_STRICT: false
-      KC_HTTPS_KEY_STORE_FILE: /etc/x509/https/tls.pfx
-      KC_HTTPS_KEY_STORE_PASSWORD: 1234
+      KC_PROXY: passthrough
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HOSTNAME_URL: 'https://localhost:4000'
+#      KC_HTTPS_KEY_STORE_FILE: /etc/x509/https/tls.pfx               # single pfx
+#      KC_HTTPS_KEY_STORE_PASSWORD: 1234                              # pfx password
+      KC_HTTPS_CERTIFICATE_FILE: /etc/x509/https/docker-host.crt      # host.docker.internal SSL
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /etc/x509/https/docker-host.key  # host.docker.internal SSL
     ports:
-      - "2008:8080"
-      - "2009:8443" # SSL
+      - "4000:8443" # localhost ssl port
     volumes:
       - keycloak_data_cert:/etc/x509/https
-      - ./certs/aspnetapp.pfx:/etc/x509/https/tls.pfx
+#      - ./certs/aspnetapp.pfx:/etc/x509/https/tls.pfx                             # localhost ssl
+#      - ./certs/docker-host.crt:/usr/local/share/ca-certificates/docker-host.crt  # host.docker.internal ssl
+#      - ./certs/docker-host.key:/usr/local/share/ca-certificates/docker-host.key  # host.docker.internal ssl
+      - ./certs/docker-host.crt:/etc/x509/https/docker-host.crt                   # host.docker.internal ssl
+      - ./certs/docker-host.key:/etc/x509/https/docker-host.key                   # host.docker.internal ssl
     depends_on:
       - mssqlscripts
+    network_mode: bridge
+
+
 
 volumes:
   keycloak_data_cert:
 
 
+# openssl req -newkey rsa:4096 -x509 -sha256 -days 30650 -nodes -out docker-host.crt -keyout docker-host.key -subj "/C=TR/ST=Istanbul/L=Istanbul/O=Local company/OU=Engineering/CN=host.docker.internal" -addext "subjectAltName=DNS:host.docker.internal"
+# localhost, host.docker.internal
+# openssl req -newkey rsa:4096 -x509 -sha256 -days 30650 -nodes -out docker-host.crt -keyout docker-host.key -subj "/C=TR/ST=Istanbul/L=Istanbul/O=Local company/OU=Engineering/CN=localhost" -addext "subjectAltName=DNS:localhost,DNS:host.docker.internal"
