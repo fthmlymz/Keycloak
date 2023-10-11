@@ -1,8 +1,9 @@
 version: "3.9"
 services:
   mssqlscripts:
+    container_name: keycloak.sqlscript
     image: mcr.microsoft.com/mssql-tools
-    command: /bin/bash -c 'until /opt/mssql-tools/bin/sqlcmd -S host.docker.internal -U sa -P Aa123456789*-+ -Q "create database Keycloak"; do sleep 5; done'
+    command: /bin/bash -c 'until /opt/mssql-tools/bin/sqlcmd -S host.docker.internal -U sa -P Aa123456789*-+ -Q "create database KeycloakDb"; do sleep 5; done'
     
   keycloak:
     container_name: keycloak
